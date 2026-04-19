@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 25% 6%;
+    --foreground: 225 20% 92%;
+    --card: 225 22% 9%;
+    --card-foreground: 225 20% 92%;
+    --popover: 225 22% 9%;
+    --popover-foreground: 225 20% 92%;
+    --primary: 191 100% 50%;
+    --primary-foreground: 225 25% 6%;
+    --secondary: 225 20% 14%;
+    --secondary-foreground: 225 20% 80%;
+    --muted: 225 20% 14%;
+    --muted-foreground: 225 10% 50%;
+    --accent: 225 20% 18%;
+    --accent-foreground: 225 20% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 20% 16%;
+    --input: 225 20% 12%;
+    --ring: 191 100% 50%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * { border-color: hsl(var(--border)); }
+  body {
+    @apply bg-studio-bg text-studio-text;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    height: 100vh;
+  }
+  #root { height: 100vh; display: flex; flex-direction: column; }
+}
+
+@layer components {
+  .studio-panel {
+    @apply bg-studio-panel border-studio-border;
+  }
+  .studio-surface {
+    @apply bg-studio-surface border border-studio-border rounded-lg;
+  }
+  .studio-btn {
+    @apply flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150;
+    @apply text-studio-muted hover:text-studio-text hover:bg-studio-hover;
+    min-height: 32px;
+  }
+  .studio-btn-primary {
+    @apply bg-studio-accent text-studio-bg font-semibold hover:bg-studio-accent-dim;
+    @apply px-4 py-2 rounded-md text-sm transition-all duration-150;
+  }
+  .studio-btn-icon {
+    @apply w-8 h-8 flex items-center justify-center rounded-md transition-all duration-150;
+    @apply text-studio-muted hover:text-studio-text hover:bg-studio-hover;
+  }
+  .studio-section-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-studio-subtle px-3 py-2;
+  }
+  .layer-item {
+    @apply flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-all duration-150;
+    @apply hover:bg-studio-hover border border-transparent;
+  }
+  .layer-item.selected {
+    @apply bg-studio-hover border-studio-accent/30;
+    box-shadow: inset 2px 0 0 #00d4ff;
+  }
+  .canvas-workspace {
+    background-color: #070809;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(0,212,255,0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(124,58,237,0.03) 0%, transparent 50%),
+      linear-gradient(#1a1c2614 1px, transparent 1px),
+      linear-gradient(90deg, #1a1c2614 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+  }
+  .property-input {
+    @apply w-full bg-studio-bg border border-studio-border rounded px-2 py-1.5 text-sm text-studio-text;
+    @apply focus:outline-none focus:border-studio-accent/60 focus:ring-1 focus:ring-studio-accent/30;
+    @apply placeholder:text-studio-subtle transition-all duration-150;
+  }
+  .timeline-track {
+    @apply h-8 bg-studio-surface border-b border-studio-border relative;
+  }
+  .keyframe-dot {
+    @apply absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full cursor-pointer;
+    @apply bg-studio-accent border-2 border-studio-panel hover:scale-125 transition-transform;
+  }
+  .preset-card {
+    @apply p-2 rounded-lg border border-studio-border bg-studio-surface cursor-pointer;
+    @apply hover:border-studio-accent/50 hover:bg-studio-hover transition-all duration-200;
+    @apply flex flex-col items-center gap-1.5 text-center;
+  }
+  .preset-card.active {
+    @apply border-studio-accent bg-studio-accent/10;
+  }
+  .tab-btn {
+    @apply px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150;
+    @apply text-studio-muted hover:text-studio-text;
+  }
+  .tab-btn.active {
+    @apply bg-studio-hover text-studio-text;
+  }
+  .scrollbar-studio {
+    scrollbar-width: thin;
+    scrollbar-color: #252736 transparent;
+  }
+  .scrollbar-studio::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-studio::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-studio::-webkit-scrollbar-thumb { background: #252736; border-radius: 4px; }
+  .canvas-element {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+  }
+  .canvas-element.selected {
+    outline: 2px solid #00d4ff;
+    outline-offset: 2px;
+  }
+  .canvas-element.selected::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border: 1px dashed rgba(0,212,255,0.4);
+    pointer-events: none;
+  }
+  .resize-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #00d4ff;
+    border: 2px solid #0a0b0f;
+    border-radius: 2px;
+    cursor: se-resize;
+    bottom: -4px;
+    right: -4px;
+  }
+  .neon-glow { box-shadow: 0 0 12px rgba(0,212,255,0.4), 0 0 24px rgba(0,212,255,0.1); }
+  .purple-glow { box-shadow: 0 0 12px rgba(124,58,237,0.4), 0 0 24px rgba(124,58,237,0.1); }
+}
+
+/* Scrollbar global */
+* { scrollbar-width: thin; scrollbar-color: #252736 transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #252736; border-radius: 4px; }
+
+/* Canvas animations preview */
+@keyframes bounce-in { 0% { transform: scale(0); } 60% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes slide-from-left { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slide-from-right { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slide-from-top { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slide-from-bottom { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes zoom-in { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes zoom-out { from { transform: scale(1.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes rotate-in { from { transform: rotate(-180deg) scale(0); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
+@keyframes flip-in-x { from { transform: rotateX(-90deg); opacity: 0; } to { transform: rotateX(0); opacity: 1; } }
+@keyframes flip-in-y { from { transform: rotateY(-90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes rubber-band { 0% { transform: scaleX(1); } 30% { transform: scaleX(1.25) scaleY(0.75); } 60% { transform: scaleX(0.75) scaleY(1.25); } 80% { transform: scaleX(1.05) scaleY(0.95); } 100% { transform: scaleX(1); } }
+@keyframes pulse-scale { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes swing { 20% { transform: rotate3d(0,0,1,15deg); } 40% { transform: rotate3d(0,0,1,-10deg); } 60% { transform: rotate3d(0,0,1,5deg); } 80% { transform: rotate3d(0,0,1,-5deg); } 100% { transform: rotate3d(0,0,1,0deg); } }
+@keyframes tada { 0% { transform: scaleX(1); } 10% { transform: scale3d(.9,.9,.9) rotate3d(0,0,1,-3deg); } 20% { transform: scale3d(.9,.9,.9) rotate3d(0,0,1,-3deg); } 30% { transform: scale3d(1.1,1.1,1.1) rotate3d(0,0,1,3deg); } 100% { transform: scaleX(1) rotate3d(0,0,1,0deg); } }
+@keyframes heart-beat { 0% { transform: scale(1); } 14% { transform: scale(1.3); } 28% { transform: scale(1); } 42% { transform: scale(1.3); } 70% { transform: scale(1); } }
+@keyframes jello { 0%, 100% { transform: skewX(0deg) skewY(0deg); } 30% { transform: skewX(-12.5deg) skewY(-12.5deg); } 60% { transform: skewX(6.25deg) skewY(6.25deg); } 80% { transform: skewX(-3.125deg) skewY(-3.125deg); } }
+@keyframes light-speed-in { from { transform: translateX(-100%) skewX(-30deg); opacity: 0; } 60% { transform: skewX(20deg); opacity: 1; } 80% { transform: skewX(-5deg); } 100% { transform: translateX(0); } }
