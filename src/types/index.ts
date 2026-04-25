@@ -44,8 +44,8 @@ export interface Layer {
   blendMode: string;
   animation?: LayerAnimation;
   // Type-specific
-  content?: string; // text content, html content, src for image
-  src?: string; // image source
+  content?: string;
+  src?: string;
   shape?: "rect" | "circle" | "triangle" | "star";
   fill?: string;
   stroke?: string;
@@ -55,13 +55,28 @@ export interface Layer {
   fontWeight?: string;
   color?: string;
   textAlign?: string;
+  letterSpacing?: number;
+  lineHeight?: number;
+  textShadow?: string;
+  boxShadow?: string;
   iconName?: string;
   borderRadius?: number;
+  objectFit?: "contain" | "cover" | "fill";
   filters?: LayerFilter[];
+  // Effects
+  glowColor?: string;
+  glowIntensity?: number;
+  gradient?: GradientConfig;
+}
+
+export interface GradientConfig {
+  type: "linear" | "radial";
+  angle: number;
+  stops: { color: string; position: number }[];
 }
 
 export interface LayerFilter {
-  type: "blur" | "brightness" | "contrast" | "saturate" | "hue-rotate" | "drop-shadow" | "grayscale";
+  type: "blur" | "brightness" | "contrast" | "saturate" | "hue-rotate" | "drop-shadow" | "grayscale" | "sepia" | "invert";
   value: number;
 }
 
@@ -74,7 +89,7 @@ export interface Project {
   layers: Layer[];
   createdAt: string;
   updatedAt: string;
-  duration: number; // total animation duration in seconds
+  duration: number;
 }
 
 export interface Asset3D {
@@ -102,3 +117,13 @@ export interface CanvasTransform {
 export type PanelTab = "layers" | "assets" | "animations" | "elements";
 export type PropertiesTab = "transform" | "animation" | "style" | "filters" | "effects";
 export type ActiveTool = "select" | "text" | "shape" | "pan" | "zoom";
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  width: number;
+  height: number;
+  description: string;
+}

@@ -11,9 +11,10 @@ export default function App() {
         theme="dark"
         toastOptions={{
           style: {
-            background: "#111218",
-            border: "1px solid #252736",
+            background: "#0f1014",
+            border: "1px solid #22242e",
             color: "#e8eaf2",
+            fontSize: "13px",
           },
         }}
       />
