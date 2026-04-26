@@ -115,6 +115,13 @@
     pointer-events: none;
     border-radius: 2px;
   }
+  .canvas-element.editing-text {
+    outline: 2px solid #3b82f6 !important;
+    cursor: text !important;
+  }
+  .canvas-element.editing-text::before {
+    border-color: rgba(59, 130, 246, 0.4) !important;
+  }
 
   /* ─── Form inputs ─── */
   .property-input {

@@ -1,16 +1,22 @@
-
+import { useState } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { ANIMATION_PRESETS } from "@/constants/animations";
-import { BLEND_MODES, FONT_FAMILIES, BACKGROUND_PRESETS } from "@/constants/assets";
+import { BLEND_MODES, FONT_FAMILIES, BACKGROUND_PRESETS, CANVAS_PRESETS } from "@/constants/assets";
 import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
+import AlignmentPanel from "@/components/features/AlignmentPanel";
 import type { PropertiesTab, GradientConfig } from "@/types";
 
 const PROP_TABS: { id: PropertiesTab; label: string }[] = [
   { id: "transform", label: "Transform" },
   { id: "style", label: "Style" },
-  { id: "animation", label: "Animate" },
+  { id: "animation", label: "Anim" },
   { id: "filters", label: "Filters" },
-  { id: "effects", label: "Effects" },
+  { id: "effects", label: "FX" },
+];
+
+const COLOR_SWATCHES = [
+  "#00d4ff", "#7c3aed", "#10b981", "#f59e0b", "#ef4444", "#ec4899",
+  "#ffffff", "#9ca3af", "#374151", "#000000", "#0d0d1a", "#1e1b4b",
 ];
 
 function NumberInput({ label, value, onChange, min, max, step = 1, unit = "" }: {
@@ -21,25 +27,55 @@ function NumberInput({ label, value, onChange, min, max, step = 1, unit = "" }: 
     <div className="flex items-center gap-2">
       <label className="text-[10px] text-studio-subtle w-14 shrink-0">{label}</label>
       <div className="flex items-center flex-1 gap-1">
-        <input
-          type="number"
-          value={value}
-          onChange={e => onChange(parseFloat(e.target.value) || 0)}
-          min={min}
-          max={max}
-          step={step}
-          className="property-input text-xs h-7 flex-1"
-        />
+        <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          min={min} max={max} step={step} className="property-input text-xs h-7 flex-1" />
         {unit && <span className="text-[10px] text-studio-subtle w-4 shrink-0">{unit}</span>}
       </div>
     </div>
   );
 }
 
-function GradientEditor({ gradient, onChange }: {
-  gradient: GradientConfig;
-  onChange: (g: GradientConfig) => void;
-}) {
+function ColorPicker({ value, onChange, label }: { value: string; onChange: (v: string) => void; label?: string }) {
+  const [recentColors, setRecentColors] = useState<string[]>([]);
+
+  const handleChange = (color: string) => {
+    onChange(color);
+    setRecentColors(prev => [color, ...prev.filter(c => c !== color)].slice(0, 8));
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {label && <label className="text-[10px] text-studio-subtle block">{label}</label>}
+      <div className="flex gap-2">
+        <input type="color" value={value.startsWith("#") ? value : "#ffffff"}
+          onChange={e => handleChange(e.target.value)} className="w-8 h-7 rounded cursor-pointer border-0" />
+        <input type="text" value={value} onChange={e => handleChange(e.target.value)} className="property-input text-xs h-7 flex-1" />
+      </div>
+      {/* Swatches */}
+      <div className="grid grid-cols-6 gap-1">
+        {COLOR_SWATCHES.map(c => (
+          <button key={c} onClick={() => handleChange(c)} title={c}
+            className={`w-full aspect-square rounded border transition-all ${value === c ? "border-studio-accent scale-110" : "border-studio-border/50 hover:border-studio-accent/50"}`}
+            style={{ background: c }} />
+        ))}
+      </div>
+      {recentColors.length > 0 && (
+        <div>
+          <div className="text-[9px] text-studio-subtle mb-1">Recent</div>
+          <div className="flex gap-1 flex-wrap">
+            {recentColors.map((c, i) => (
+              <button key={i} onClick={() => handleChange(c)} title={c}
+                className="w-5 h-5 rounded border border-studio-border/50 hover:border-studio-accent/50 transition-all"
+                style={{ background: c }} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GradientEditor({ gradient, onChange }: { gradient: GradientConfig; onChange: (g: GradientConfig) => void }) {
   return (
     <div className="space-y-2">
       <div className="flex gap-1">
@@ -54,28 +90,29 @@ function GradientEditor({ gradient, onChange }: {
         <div className="flex items-center gap-2">
           <label className="text-[10px] text-studio-subtle w-14">Angle</label>
           <input type="range" min={0} max={360} value={gradient.angle}
-            onChange={e => onChange({ ...gradient, angle: +e.target.value })}
-            className="flex-1 h-1.5 accent-studio-accent" />
+            onChange={e => onChange({ ...gradient, angle: +e.target.value })} className="flex-1 h-1.5 accent-studio-accent" />
           <span className="text-[10px] text-studio-text font-mono w-8">{gradient.angle}°</span>
         </div>
       )}
+      {/* Gradient preview */}
+      <div className="h-5 rounded border border-studio-border" style={{
+        background: gradient.type === "radial"
+          ? `radial-gradient(circle, ${gradient.stops.map(s => `${s.color} ${s.position}%`).join(",")})`
+          : `linear-gradient(${gradient.angle}deg, ${gradient.stops.map(s => `${s.color} ${s.position}%`).join(",")})`,
+      }} />
       <div className="space-y-1">
         {gradient.stops.map((stop, i) => (
           <div key={i} className="flex items-center gap-1.5">
-            <input type="color" value={stop.color}
-              onChange={e => {
-                const stops = [...gradient.stops];
-                stops[i] = { ...stops[i], color: e.target.value };
-                onChange({ ...gradient, stops });
-              }}
-              className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
-            <input type="range" min={0} max={100} value={stop.position}
-              onChange={e => {
-                const stops = [...gradient.stops];
-                stops[i] = { ...stops[i], position: +e.target.value };
-                onChange({ ...gradient, stops });
-              }}
-              className="flex-1 h-1.5 accent-studio-accent" />
+            <input type="color" value={stop.color} onChange={e => {
+              const stops = [...gradient.stops];
+              stops[i] = { ...stops[i], color: e.target.value };
+              onChange({ ...gradient, stops });
+            }} className="w-6 h-6 rounded cursor-pointer border-0 p-0" />
+            <input type="range" min={0} max={100} value={stop.position} onChange={e => {
+              const stops = [...gradient.stops];
+              stops[i] = { ...stops[i], position: +e.target.value };
+              onChange({ ...gradient, stops });
+            }} className="flex-1 h-1.5 accent-studio-accent" />
             <span className="text-[10px] text-studio-muted font-mono w-6">{stop.position}%</span>
             {gradient.stops.length > 2 && (
               <button onClick={() => onChange({ ...gradient, stops: gradient.stops.filter((_, j) => j !== i) })}
@@ -83,10 +120,8 @@ function GradientEditor({ gradient, onChange }: {
             )}
           </div>
         ))}
-        <button
-          onClick={() => onChange({ ...gradient, stops: [...gradient.stops, { color: "#7c3aed", position: 100 }] })}
-          className="text-[10px] text-studio-muted hover:text-studio-accent transition-colors"
-        >
+        <button onClick={() => onChange({ ...gradient, stops: [...gradient.stops, { color: "#7c3aed", position: 100 }] })}
+          className="text-[10px] text-studio-muted hover:text-studio-accent transition-colors">
           + Add stop
         </button>
       </div>
@@ -106,15 +141,6 @@ export default function RightPanel() {
     ? ANIMATION_PRESETS.find(p => p.id === currentAnimation.presetId)
     : null;
 
-  // The original error "Definition for rule 'react-hooks/rules-of-hooks' was not found"
-  // indicates an ESLint configuration issue, not a TypeScript syntax error.
-  // The comment was already there, but if ESLint were properly configured,
-  // it might complain about `useBackgroundRemoval` being called conditionally
-  // or inside a non-component function.
-  // Assuming the intent is for `useBackgroundRemoval` to be called unconditionally
-  // at the top level of the component, even if its effects might only apply
-  // when `selectedLayerId` and `selectedLayer` are defined.
-  // Moving the hook call to a place where React hooks rules are followed.
   const { removeBg, status: bgStatus, progress: bgProgress } = useBackgroundRemoval(
     (dataUrl) => selectedLayerId && updateLayer(selectedLayerId, { src: dataUrl })
   );
@@ -129,25 +155,32 @@ export default function RightPanel() {
             <NumberInput label="Height" value={project.height} onChange={v => updateProjectMeta({ height: v })} min={100} max={4000} />
             <NumberInput label="Duration" value={project.duration} onChange={v => updateProjectMeta({ duration: v })} min={0.5} max={60} step={0.5} unit="s" />
           </div>
+          {/* Canvas size presets */}
+          <div className="mt-2">
+            <div className="text-[10px] text-studio-subtle mb-1.5">Size Presets</div>
+            <div className="grid grid-cols-1 gap-1">
+              {CANVAS_PRESETS.map(p => (
+                <button key={p.name}
+                  onClick={() => updateProjectMeta({ width: p.width, height: p.height })}
+                  className={`text-left px-2 py-1.5 rounded text-[10px] transition-all border ${project.width === p.width && project.height === p.height ? "border-studio-accent/50 bg-studio-accent/5 text-studio-accent" : "border-transparent text-studio-muted hover:text-studio-text hover:bg-studio-hover"}`}
+                >
+                  <span className="font-mono">{p.width}×{p.height}</span>
+                  <span className="text-studio-subtle ml-1.5">{p.name.split("(")[1]?.replace(")", "") || ""}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="p-3 border-b border-studio-border">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-studio-subtle mb-2">Background</div>
-          <input
-            type="text"
-            value={project.background}
-            onChange={e => updateProjectMeta({ background: e.target.value })}
-            className="property-input text-xs mb-2"
-            placeholder="#000000 or CSS gradient"
-          />
+          <input type="text" value={project.background} onChange={e => updateProjectMeta({ background: e.target.value })}
+            className="property-input text-xs mb-2" placeholder="#000000 or CSS gradient" />
           <div className="grid grid-cols-4 gap-1">
             {BACKGROUND_PRESETS.map(bg => (
-              <button
-                key={bg.name}
-                onClick={() => updateProjectMeta({ background: bg.value })}
+              <button key={bg.name} onClick={() => updateProjectMeta({ background: bg.value })}
                 className={`aspect-square rounded border transition-all ${project.background === bg.value ? "border-studio-accent" : "border-studio-border hover:border-studio-accent/60"}`}
                 style={{ background: bg.value === "transparent" ? "repeating-conic-gradient(#555 0% 25%, #333 0% 50%) 0 0 / 8px 8px" : bg.value }}
-                title={bg.name}
-              />
+                title={bg.name} />
             ))}
           </div>
         </div>
@@ -172,14 +205,10 @@ export default function RightPanel() {
             selectedLayer.type === "icon" ? "bg-yellow-500/15 text-yellow-400" :
             "bg-studio-hover text-studio-muted"
           }`}>{selectedLayer.type}</span>
-          <input
-            value={selectedLayer.name}
-            onChange={e => update({ name: e.target.value })}
-            className="bg-transparent text-xs text-studio-text flex-1 border-b border-transparent hover:border-studio-border focus:border-studio-accent/60 focus:outline-none min-w-0"
-          />
+          <input value={selectedLayer.name} onChange={e => update({ name: e.target.value })}
+            className="bg-transparent text-xs text-studio-text flex-1 border-b border-transparent hover:border-studio-border focus:border-studio-accent/60 focus:outline-none min-w-0" />
         </div>
-        {/* Quick coords */}
-        <div className="flex gap-2 mt-1.5 text-[10px] text-studio-subtle font-mono">
+        <div className="flex gap-2 mt-1 text-[10px] text-studio-subtle font-mono">
           <span>x:{selectedLayer.x}</span>
           <span>y:{selectedLayer.y}</span>
           <span>{selectedLayer.width}×{selectedLayer.height}</span>
@@ -189,11 +218,8 @@ export default function RightPanel() {
       {/* Tab bar */}
       <div className="flex border-b border-studio-border">
         {PROP_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActivePropertiesTab(tab.id)}
-            className={`flex-1 py-2 text-[9px] font-semibold uppercase tracking-wide transition-all ${activePropertiesTab === tab.id ? "text-studio-accent border-b-2 border-studio-accent bg-studio-accent/5" : "text-studio-muted hover:text-studio-text"}`}
-          >
+          <button key={tab.id} onClick={() => setActivePropertiesTab(tab.id)}
+            className={`flex-1 py-2 text-[9px] font-semibold uppercase tracking-wide transition-all ${activePropertiesTab === tab.id ? "text-studio-accent border-b-2 border-studio-accent bg-studio-accent/5" : "text-studio-muted hover:text-studio-text"}`}>
             {tab.label}
           </button>
         ))}
@@ -245,6 +271,9 @@ export default function RightPanel() {
               </select>
             </div>
             <NumberInput label="Radius" value={selectedLayer.borderRadius || 0} onChange={v => update({ borderRadius: v })} min={0} max={500} unit="px" />
+
+            {/* Alignment panel */}
+            <AlignmentPanel />
           </>
         )}
 
@@ -258,13 +287,7 @@ export default function RightPanel() {
                   <textarea value={selectedLayer.content || ""} onChange={e => update({ content: e.target.value })}
                     className="property-input text-xs min-h-[60px] resize-none" rows={3} />
                 </div>
-                <div>
-                  <label className="text-[10px] text-studio-subtle block mb-1">Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={selectedLayer.color || "#ffffff"} onChange={e => update({ color: e.target.value })} className="w-8 h-7 rounded cursor-pointer border-0" />
-                    <input type="text" value={selectedLayer.color || "#ffffff"} onChange={e => update({ color: e.target.value })} className="property-input text-xs h-7 flex-1" />
-                  </div>
-                </div>
+                <ColorPicker value={selectedLayer.color || "#ffffff"} onChange={v => update({ color: v })} label="Color" />
                 <NumberInput label="Font Size" value={selectedLayer.fontSize || 24} onChange={v => update({ fontSize: v })} min={8} max={500} unit="px" />
                 <div>
                   <label className="text-[10px] text-studio-subtle block mb-1">Font Family</label>
@@ -300,6 +323,19 @@ export default function RightPanel() {
                   <label className="text-[10px] text-studio-subtle block mb-1">Text Shadow</label>
                   <input type="text" value={selectedLayer.textShadow || ""} onChange={e => update({ textShadow: e.target.value })}
                     className="property-input text-xs" placeholder="2px 2px 4px #000" />
+                  <div className="grid grid-cols-2 gap-1 mt-1">
+                    {[
+                      { label: "Neon Cyan", value: "0 0 10px #00d4ff, 0 0 20px #00d4ff" },
+                      { label: "Neon Purple", value: "0 0 10px #7c3aed, 0 0 20px #7c3aed" },
+                      { label: "Hard Drop", value: "3px 3px 0 #000" },
+                      { label: "Soft Glow", value: "0 2px 20px rgba(0,0,0,0.8)" },
+                    ].map(p => (
+                      <button key={p.label} onClick={() => update({ textShadow: p.value })}
+                        className="text-[9px] px-1.5 py-1 bg-studio-hover text-studio-muted hover:text-studio-text rounded transition-all text-left">
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
@@ -317,37 +353,24 @@ export default function RightPanel() {
                     ))}
                   </div>
                 </div>
-
-                {/* Fill mode toggle */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-[10px] text-studio-subtle">Fill</label>
                     <button
                       onClick={() => {
-                        if (selectedLayer.gradient) {
-                          update({ gradient: undefined });
-                        } else {
-                          update({ gradient: { type: "linear", angle: 135, stops: [{ color: "#00d4ff", position: 0 }, { color: "#7c3aed", position: 100 }] } });
-                        }
+                        if (selectedLayer.gradient) update({ gradient: undefined });
+                        else update({ gradient: { type: "linear", angle: 135, stops: [{ color: "#00d4ff", position: 0 }, { color: "#7c3aed", position: 100 }] } });
                       }}
-                      className={`text-[9px] px-2 py-0.5 rounded transition-all ${selectedLayer.gradient ? "bg-studio-accent/20 text-studio-accent" : "bg-studio-hover text-studio-muted"}`}
-                    >
+                      className={`text-[9px] px-2 py-0.5 rounded transition-all ${selectedLayer.gradient ? "bg-studio-accent/20 text-studio-accent" : "bg-studio-hover text-studio-muted"}`}>
                       {selectedLayer.gradient ? "Gradient ✓" : "Gradient"}
                     </button>
                   </div>
-
                   {selectedLayer.gradient ? (
                     <GradientEditor gradient={selectedLayer.gradient} onChange={g => update({ gradient: g })} />
                   ) : (
-                    <div className="flex gap-2">
-                      <input type="color" value={selectedLayer.fill?.startsWith("#") ? selectedLayer.fill : "#00d4ff"}
-                        onChange={e => update({ fill: e.target.value })} className="w-8 h-7 rounded cursor-pointer border-0" />
-                      <input type="text" value={selectedLayer.fill || "#00d4ff"} onChange={e => update({ fill: e.target.value })}
-                        className="property-input text-xs h-7 flex-1" placeholder="Color or CSS" />
-                    </div>
+                    <ColorPicker value={selectedLayer.fill || "#00d4ff"} onChange={v => update({ fill: v })} />
                   )}
                 </div>
-
                 <div>
                   <label className="text-[10px] text-studio-subtle block mb-1">Stroke</label>
                   <div className="flex gap-2">
@@ -364,13 +387,7 @@ export default function RightPanel() {
                   <label className="text-[10px] text-studio-subtle block mb-1">Symbol</label>
                   <input type="text" value={selectedLayer.content || "★"} onChange={e => update({ content: e.target.value })} className="property-input text-xs text-2xl text-center" />
                 </div>
-                <div>
-                  <label className="text-[10px] text-studio-subtle block mb-1">Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={selectedLayer.color || "#ffffff"} onChange={e => update({ color: e.target.value })} className="w-8 h-7 rounded cursor-pointer border-0" />
-                    <input type="text" value={selectedLayer.color || "#ffffff"} onChange={e => update({ color: e.target.value })} className="property-input text-xs h-7 flex-1" />
-                  </div>
-                </div>
+                <ColorPicker value={selectedLayer.color || "#ffffff"} onChange={v => update({ color: v })} label="Color" />
                 <NumberInput label="Size" value={selectedLayer.fontSize || 48} onChange={v => update({ fontSize: v })} min={8} max={500} unit="px" />
                 <div>
                   <label className="text-[10px] text-studio-subtle block mb-1">Text Shadow</label>
@@ -381,9 +398,10 @@ export default function RightPanel() {
 
             {selectedLayer.type === "html" && (
               <div>
-                <label className="text-[10px] text-studio-subtle block mb-1">HTML</label>
+                <label className="text-[10px] text-studio-subtle block mb-1">HTML Code</label>
                 <textarea value={selectedLayer.content || ""} onChange={e => update({ content: e.target.value })}
-                  className="property-input text-xs font-mono min-h-[140px] resize-none leading-relaxed" rows={7} />
+                  className="property-input text-xs font-mono min-h-[160px] resize-none leading-relaxed" rows={8} />
+                <p className="text-[9px] text-studio-subtle mt-1">Inline styles supported. CSS animations work in preview.</p>
               </div>
             )}
 
@@ -392,7 +410,6 @@ export default function RightPanel() {
                 <img src={selectedLayer.src} alt="Preview"
                   className="w-full rounded border border-studio-border"
                   style={{ background: "repeating-conic-gradient(#333 0% 25%, #444 0% 50%) 0 0 / 12px 12px", maxHeight: 100, objectFit: "contain" }} />
-
                 <div>
                   <label className="text-[10px] text-studio-subtle block mb-1">Object Fit</label>
                   <div className="grid grid-cols-3 gap-1">
@@ -404,7 +421,6 @@ export default function RightPanel() {
                     ))}
                   </div>
                 </div>
-
                 {bgStatus === "loading" ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
@@ -419,20 +435,16 @@ export default function RightPanel() {
                     </p>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => removeBg(selectedLayer.src!)}
-                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg border transition-all bg-gradient-to-r from-studio-accent/10 to-studio-purple/10 border-studio-accent/40 text-studio-accent hover:from-studio-accent/20 hover:to-studio-purple/20 hover:border-studio-accent/70"
-                  >
+                  <button onClick={() => removeBg(selectedLayer.src!)}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg border transition-all bg-gradient-to-r from-studio-accent/10 to-studio-purple/10 border-studio-accent/40 text-studio-accent hover:from-studio-accent/20 hover:to-studio-purple/20 hover:border-studio-accent/70">
                     <span>✦</span> Remove Background (AI)
                   </button>
                 )}
-                {bgStatus === "done" && (
-                  <p className="text-[10px] text-studio-success text-center">✓ Background removed</p>
-                )}
+                {bgStatus === "done" && <p className="text-[10px] text-studio-success text-center">✓ Background removed</p>}
               </div>
             )}
 
-            {/* Box Shadow for all types */}
+            {/* Box Shadow */}
             <div className="border-t border-studio-border pt-2 mt-1">
               <label className="text-[10px] text-studio-subtle block mb-1">Box Shadow</label>
               <input type="text" value={selectedLayer.boxShadow || ""} onChange={e => update({ boxShadow: e.target.value })}
@@ -452,10 +464,9 @@ export default function RightPanel() {
             ) : (
               <div className="bg-studio-hover rounded-lg p-2.5 mb-2 text-center">
                 <div className="text-xs text-studio-subtle">No animation applied</div>
-                <div className="text-[10px] text-studio-muted mt-0.5">Open Animations panel → apply preset</div>
+                <div className="text-[10px] text-studio-muted mt-0.5">Go to Animations panel → apply preset</div>
               </div>
             )}
-
             {currentAnimation && (
               <>
                 <NumberInput label="Duration" value={currentAnimation.duration} onChange={v => update({ animation: { ...currentAnimation, duration: v } })} min={0.1} max={60} step={0.1} unit="s" />
@@ -476,15 +487,11 @@ export default function RightPanel() {
                   <label className="text-[10px] text-studio-subtle block mb-1">Easing</label>
                   <select value={currentAnimation.easing} onChange={e => update({ animation: { ...currentAnimation, easing: e.target.value } })} className="property-input text-xs">
                     {[
-                      ["linear", "Linear"],
-                      ["ease", "Ease"],
-                      ["ease-in", "Ease In"],
-                      ["ease-out", "Ease Out"],
+                      ["linear", "Linear"], ["ease", "Ease"], ["ease-in", "Ease In"], ["ease-out", "Ease Out"],
                       ["ease-in-out", "Ease In Out"],
                       ["cubic-bezier(0.34, 1.56, 0.64, 1)", "Bounce"],
                       ["cubic-bezier(0.68, -0.55, 0.265, 1.55)", "Spring"],
-                      ["steps(8)", "Stepped (8)"],
-                      ["steps(4)", "Stepped (4)"],
+                      ["steps(8)", "Stepped (8)"], ["steps(4)", "Stepped (4)"],
                     ].map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                   </select>
                 </div>
@@ -519,18 +526,14 @@ export default function RightPanel() {
                     <label className={`text-[10px] ${isActive ? "text-studio-accent" : "text-studio-subtle"}`}>{label}</label>
                     <span className="text-[10px] text-studio-text font-mono">{value}{unit}</span>
                   </div>
-                  <input
-                    type="range" min={min} max={max} value={value}
-                    onChange={e => {
-                      const newVal = +e.target.value;
-                      const filters = [...(selectedLayer.filters || [])];
-                      const idx = filters.findIndex(f => f.type === type);
-                      if (idx >= 0) filters[idx] = { type, value: newVal };
-                      else filters.push({ type, value: newVal });
-                      update({ filters });
-                    }}
-                    className="w-full h-1.5 accent-studio-accent"
-                  />
+                  <input type="range" min={min} max={max} value={value} onChange={e => {
+                    const newVal = +e.target.value;
+                    const filters = [...(selectedLayer.filters || [])];
+                    const idx = filters.findIndex(f => f.type === type);
+                    if (idx >= 0) filters[idx] = { type, value: newVal };
+                    else filters.push({ type, value: newVal });
+                    update({ filters });
+                  }} className="w-full h-1.5 accent-studio-accent" />
                 </div>
               );
             })}
@@ -549,17 +552,13 @@ export default function RightPanel() {
                 <label className="text-[10px] text-studio-subtle font-semibold uppercase tracking-wide">Glow Effect</label>
                 <button
                   onClick={() => update({ glowColor: selectedLayer.glowColor ? undefined : "#00d4ff", glowIntensity: selectedLayer.glowIntensity || 12 })}
-                  className={`text-[9px] px-2 py-0.5 rounded transition-all ${selectedLayer.glowColor ? "bg-studio-accent/20 text-studio-accent" : "bg-studio-hover text-studio-muted"}`}
-                >
+                  className={`text-[9px] px-2 py-0.5 rounded transition-all ${selectedLayer.glowColor ? "bg-studio-accent/20 text-studio-accent" : "bg-studio-hover text-studio-muted"}`}>
                   {selectedLayer.glowColor ? "ON" : "OFF"}
                 </button>
               </div>
               {selectedLayer.glowColor && (
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input type="color" value={selectedLayer.glowColor} onChange={e => update({ glowColor: e.target.value })} className="w-8 h-7 rounded border-0 cursor-pointer" />
-                    <input type="text" value={selectedLayer.glowColor} onChange={e => update({ glowColor: e.target.value })} className="property-input text-xs h-7 flex-1" />
-                  </div>
+                  <ColorPicker value={selectedLayer.glowColor} onChange={v => update({ glowColor: v })} />
                   <div className="flex items-center gap-2">
                     <label className="text-[10px] text-studio-subtle w-14">Intensity</label>
                     <input type="range" min={2} max={60} value={selectedLayer.glowIntensity || 12}
@@ -580,6 +579,8 @@ export default function RightPanel() {
                   { label: "Neon Purple", value: "0 0 20px #7c3aed, 0 0 40px #7c3aed50" },
                   { label: "Soft Lift", value: "0 12px 40px rgba(0,0,0,0.5)" },
                   { label: "Inner Light", value: "inset 0 1px 0 rgba(255,255,255,0.1)" },
+                  { label: "Pink Glow", value: "0 0 20px #ec4899, 0 0 40px #ec489950" },
+                  { label: "Green Glow", value: "0 0 20px #10b981, 0 0 40px #10b98150" },
                 ].map(preset => (
                   <button key={preset.label} onClick={() => update({ boxShadow: preset.value })}
                     className="text-[9px] px-2 py-1.5 bg-studio-hover hover:bg-studio-hover/80 text-studio-muted hover:text-studio-text rounded transition-all text-left">
@@ -590,13 +591,13 @@ export default function RightPanel() {
             </div>
 
             <div className="border-t border-studio-border pt-3">
-              <label className="text-[10px] text-studio-subtle font-semibold uppercase tracking-wide block mb-2">Quick FX</label>
+              <label className="text-[10px] text-studio-subtle font-semibold uppercase tracking-wide block mb-2">Quick FX Presets</label>
               <div className="grid grid-cols-2 gap-1">
                 {[
-                  { label: "Glass", apply: () => update({ boxShadow: "0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)", filters: selectedLayer.filters?.filter(f => f.type !== "brightness")?.concat([{ type: "brightness" as const, value: 105 }]) || [{ type: "brightness" as const, value: 105 }] }) },
-                  { label: "Hologram", apply: () => update({ glowColor: "#00d4ff", glowIntensity: 16, filters: selectedLayer.filters?.filter(f => f.type !== "saturate" && f.type !== "hue-rotate")?.concat([{ type: "saturate" as const, value: 200 }, { type: "hue-rotate" as const, value: 0 }]) || [{ type: "saturate" as const, value: 200 }, { type: "hue-rotate" as const, value: 0 }] }) },
-                  { label: "Retro", apply: () => update({ filters: selectedLayer.filters?.filter(f => f.type !== "sepia" && f.type !== "contrast")?.concat([{ type: "sepia" as const, value: 60 }, { type: "contrast" as const, value: 130 }]) || [{ type: "sepia" as const, value: 60 }, { type: "contrast" as const, value: 130 }] }) },
-                  { label: "Night Mode", apply: () => update({ filters: selectedLayer.filters?.filter(f => f.type !== "brightness" && f.type !== "saturate")?.concat([{ type: "brightness" as const, value: 50 }, { type: "saturate" as const, value: 50 }]) || [{ type: "brightness" as const, value: 50 }, { type: "saturate" as const, value: 50 }] }) },
+                  { label: "Glass", apply: () => update({ boxShadow: "0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)", filters: (selectedLayer.filters || []).filter(f => f.type !== "brightness").concat([{ type: "brightness" as const, value: 105 }]) }) },
+                  { label: "Hologram", apply: () => update({ glowColor: "#00d4ff", glowIntensity: 16, filters: (selectedLayer.filters || []).filter(f => f.type !== "saturate" && f.type !== "hue-rotate").concat([{ type: "saturate" as const, value: 200 }, { type: "hue-rotate" as const, value: 0 }]) }) },
+                  { label: "Retro", apply: () => update({ filters: (selectedLayer.filters || []).filter(f => f.type !== "sepia" && f.type !== "contrast").concat([{ type: "sepia" as const, value: 60 }, { type: "contrast" as const, value: 130 }]) }) },
+                  { label: "Night Mode", apply: () => update({ filters: (selectedLayer.filters || []).filter(f => f.type !== "brightness" && f.type !== "saturate").concat([{ type: "brightness" as const, value: 50 }, { type: "saturate" as const, value: 50 }]) }) },
                   { label: "Neon Glow", apply: () => update({ glowColor: "#7c3aed", glowIntensity: 24, boxShadow: "0 0 30px #7c3aed40" }) },
                   { label: "Reset FX", apply: () => update({ filters: [], glowColor: undefined, glowIntensity: undefined, boxShadow: undefined }) },
                 ].map(fx => (
